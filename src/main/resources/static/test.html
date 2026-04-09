@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Mapas</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #mapa1, #mapa2 { height: 400px; width: 100%; }
+        .mapa-container { float: left; width: 45%; margin: 10px; }
+        .clear { clear: both; }
+    </style>
+</head>
+<body>
+    <h1>Test Circuitos</h1>
+    <div id="mapa1"></div>
+    <h1>Test Radios</h1>
+    <div id="mapa2"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const mapa1 = L.map('mapa1').setView([-33.2, -65.5], 6);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapa1);
+
+        const mapa2 = L.map('mapa2').setView([-33.2, -65.5], 6);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapa2);
+
+        // Cargar circuitos
+        fetch('/api/v1/circuitos/votos?universo=AFIRMATIVOS&opcionVotoId=1')
+            .then(r => r.json())
+            .then(data => {
+                console.log('Circuitos cargados:', data.features?.length);
+                
+                // Verificar primera coordenada
+                if (data.features && data.features[0]) {
+                    console.log('Primera coord:', data.features[0].geometry.coordinates[0][0]);
+                }
+                
+                L.geoJSON(data, {
+                    onEachFeature: (f, l) => l.bindPopup(f.properties.codigo)
+                }).addTo(mapa1);
+            })
+            .catch(e => console.error('Error:', e));
+
+        // Cargar radios
+        fetch('/api/v1/radios/nbi')
+            .then(r => r.json())
+            .then(data => {
+                console.log('Radios cargados:', data.features?.length);
+                L.geoJSON(data, {
+                    onEachFeature: (f, l) => l.bindPopup(f.properties.codigo)
+                }).addTo(mapa2);
+            })
+            .catch(e => console.error('Error:', e));
+    </script>
+</body>
+</html>
