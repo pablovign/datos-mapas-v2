@@ -123,6 +123,28 @@ header .subtitle {
     margin-top: 0.25rem;
 }
 
+/* Checkboxes grupo */
+.checkboxes-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: #4a5568;
+}
+
+.checkbox-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
 /* Selects */
 select {
     min-width: 200px;
@@ -165,6 +187,14 @@ select:hover {
 
 .btn-secondary:hover {
     background: #cbd5e0;
+}
+
+.btn:disabled,
+.btn[disabled] {
+    background: #cbd5e0;
+    color: #a0aec0;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 /* Mapas */

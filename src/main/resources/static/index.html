@@ -5,29 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Datos Mapas - Análisis Electoral</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="css/styles.css?v=20260409c">
+    <link rel="stylesheet" href="css/styles.css?v=20260409f">
 </head>
 <body>
     <header>
-        <h1>Datos Mapas</h1>
-        <p class="subtitle">Análisis Electoral y NBI</p>
+        <h1>Datos y Mapas</h1>
+        <p class="subtitle">Preferencias Electorales y NBI</p>
     </header>
 
     <section class="filtros">
         <div class="filtro-group">
             <label>Departamentos</label>
-            <div class="dropdown">
-                <button class="dropdown-toggle" id="deptoBtn">Seleccionar...</button>
-                <div class="dropdown-menu" id="deptoMenu">
-                    <!-- Checkboxes se cargan dinámicamente -->
-                </div>
+            <div class="checkboxes-group" id="deptoCheckboxes">
+                <!-- Checkboxes se cargan dinámicamente -->
             </div>
-            <span class="selected-count" id="deptoCount">0 seleccionados</span>
         </div>
 
         <div class="filtro-group">
             <label>Universo</label>
             <select id="universoSelect">
+                <option value="">Seleccionar...</option>
                 <option value="AFIRMATIVOS">Votos Afirmativos</option>
                 <option value="EFECTIVOS">Votos Efectivos</option>
                 <option value="HABILITADOS">Habilitados</option>
@@ -42,14 +39,14 @@
         </div>
 
         <div class="filtro-group buttons">
-            <button id="aplicarBtn" class="btn btn-primary">Aplicar Filtros</button>
+            <button id="aplicarBtn" class="btn btn-primary" disabled>Aplicar Filtros</button>
             <button id="limpiarBtn" class="btn btn-secondary">Limpiar</button>
         </div>
     </section>
 
     <section class="mapas">
         <div class="mapa-container">
-            <h2>Circuitos Electorales</h2>
+            <h2 id="tituloMapaIzquierdo">Circuitos Electorales</h2>
             <div id="mapaCircuitos" class="mapa"></div>
         </div>
         <div class="mapa-container">
@@ -78,7 +75,7 @@
                     <tr>
                         <th>Departamento</th>
                         <th>Circuito</th>
-                        <th>% Opción de voto</th>
+                        <th>% Votos</th>
                         <th>% NBI</th>
                     </tr>
                 </thead>
@@ -92,13 +89,13 @@
     </section>
 
     <footer>
-        <p>Datos proporcionados por INDEC</p>
+        <p>Fuentes: Instituto Nacional de Estadísticas y Censos y Cámara Nacional Electoral.</p>
     </footer>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="js/api.js?v=20260409c"></script>
-    <script src="js/mapas.js?v=20260409c"></script>
-    <script src="js/app.js?v=20260409c"></script>
+    <script src="js/api.js?v=20260409f"></script>
+    <script src="js/mapas.js?v=20260409f"></script>
+    <script src="js/app.js?v=20260409f"></script>
 </body>
 </html>

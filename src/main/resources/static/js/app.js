@@ -30,7 +30,7 @@ async function cargarDatosIniciales() {
         
         renderizarCircuitos(circuitosData);
         renderizarRadios(radiosData);
-        actualizarTituloMapaDerecho('Radios Censales (% NBI)');
+        actualizarTitulosMapas('Circuitos Electorales', 'Radios Censales (% NBI)');
         limpiarResultadosAnaliticos();
         
     } catch (error) {
@@ -42,42 +42,43 @@ async function cargarDatosIniciales() {
 }
 
 function configurarEventos() {
-    // Dropdown departamentos
-    const deptoBtn = document.getElementById('deptoBtn');
-    const deptoMenu = document.getElementById('deptoMenu');
-    
-    deptoBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        deptoMenu.classList.toggle('show');
-    });
-    
-    // Cerrar dropdown al hacer click fuera
-    document.addEventListener('click', () => {
-        deptoMenu.classList.remove('show');
-    });
-    
-    deptoMenu.addEventListener('click', (e) => {
-        e.stopPropagation();
-    });
-    
     // Cambio de universo
-    document.getElementById('universoSelect').addEventListener('change', actualizarOpcionesVoto);
+    document.getElementById('universoSelect').addEventListener('change', () => {
+        actualizarOpcionesVoto();
+        actualizarEstadoBotonAplicar();
+    });
+    
+    // Cambio de opción de voto
+    document.getElementById('opcionSelect').addEventListener('change', actualizarEstadoBotonAplicar);
     
     // Botones
     document.getElementById('aplicarBtn').addEventListener('click', aplicarFiltros);
     document.getElementById('limpiarBtn').addEventListener('click', limpiarFiltros);
 }
 
+function actualizarEstadoBotonAplicar() {
+    const universo = document.getElementById('universoSelect').value;
+    const opcionVoto = document.getElementById('opcionSelect').value;
+    const hayDepartamento = selectedDeptos.length > 0;
+    const hayUniverso = universo !== '';
+    const hayOpcion = opcionVoto !== '';
+    
+    const boton = document.getElementById('aplicarBtn');
+    if (boton) {
+        boton.disabled = !(hayDepartamento && hayUniverso && hayOpcion);
+    }
+}
+
 function renderizarDepartamentos() {
-    const menu = document.getElementById('deptoMenu');
-    menu.innerHTML = '';
+    const container = document.getElementById('deptoCheckboxes');
+    container.innerHTML = '';
     
     departamentos.forEach(depto => {
         const item = document.createElement('label');
-        item.className = 'dropdown-item';
+        item.className = 'checkbox-item';
         item.innerHTML = `
             <input type="checkbox" value="${depto.id}">
-            <span>${depto.nombre}</span>
+            <span>${escapeHtml(depto.nombre)}</span>
         `;
         
         const checkbox = item.querySelector('input');
@@ -87,26 +88,11 @@ function renderizarDepartamentos() {
             } else {
                 selectedDeptos = selectedDeptos.filter(id => id !== depto.id);
             }
-            actualizarContadorDeptos();
+            actualizarEstadoBotonAplicar();
         });
         
-        menu.appendChild(item);
+        container.appendChild(item);
     });
-}
-
-function actualizarContadorDeptos() {
-    const count = selectedDeptos.length;
-    const btn = document.getElementById('deptoBtn');
-    const countSpan = document.getElementById('deptoCount');
-    
-    if (count === 0) {
-        btn.textContent = 'Seleccionar...';
-    } else if (count === 1) {
-        btn.textContent = '1 seleccionado';
-    } else {
-        btn.textContent = `${count} seleccionados`;
-    }
-    countSpan.textContent = `${count} seleccionados`;
 }
 
 function actualizarOpcionesVoto() {
@@ -114,6 +100,11 @@ function actualizarOpcionesVoto() {
     const select = document.getElementById('opcionSelect');
     
     select.innerHTML = '<option value="">Seleccionar...</option>';
+    
+    if (universo === '') {
+        actualizarEstadoBotonAplicar();
+        return;
+    }
     
     let opcionesFiltradas;
     if (universo === 'AFIRMATIVOS') {
@@ -124,12 +115,16 @@ function actualizarOpcionesVoto() {
         opcionesFiltradas = [...opcionesVoto, { id: -1, nombre: 'Abstención' }];
     }
     
-    opcionesFiltradas.forEach(opcion => {
-        const option = document.createElement('option');
-        option.value = opcion.id;
-        option.textContent = opcion.nombre;
-        select.appendChild(option);
-    });
+    if (opcionesFiltradas) {
+        opcionesFiltradas.forEach(opcion => {
+            const option = document.createElement('option');
+            option.value = opcion.id;
+            option.textContent = opcion.nombre;
+            select.appendChild(option);
+        });
+    }
+    
+    actualizarEstadoBotonAplicar();
 }
 
 async function aplicarFiltros() {
@@ -147,7 +142,7 @@ async function aplicarFiltros() {
 
         renderizarCircuitos(circuitosData);
         renderizarCircuitosNbi(circuitosData);
-        actualizarTituloMapaDerecho('Circuitos Electorales (% NBI)');
+        actualizarTitulosMapas('Circuitos Electorales % de votos', 'Circuitos Electorales % NBI');
         actualizarAnalisisCorrelacion(circuitosData);
         renderizarTablaCircuitos(circuitosData);
         
@@ -164,25 +159,29 @@ function limpiarFiltros() {
     selectedDeptos = [];
     
     // Limpiar checkboxes
-    const checkboxes = document.querySelectorAll('#deptoMenu input[type="checkbox"]');
+    const checkboxes = document.querySelectorAll('#deptoCheckboxes input[type="checkbox"]');
     checkboxes.forEach(cb => cb.checked = false);
     
     // Resetear selects
-    document.getElementById('universoSelect').value = 'AFIRMATIVOS';
+    document.getElementById('universoSelect').value = '';
     document.getElementById('opcionSelect').innerHTML = '<option value="">Seleccionar...</option>';
     
     // Actualizar UI
-    actualizarContadorDeptos();
     actualizarOpcionesVoto();
+    actualizarEstadoBotonAplicar();
     
     // Recargar datos iniciales
     cargarDatosIniciales();
 }
 
-function actualizarTituloMapaDerecho(titulo) {
-    const tituloEl = document.getElementById('tituloMapaDerecho');
-    if (tituloEl) {
-        tituloEl.textContent = titulo;
+function actualizarTitulosMapas(tituloIzquierdo, tituloDerecho) {
+    const tituloIzqEl = document.getElementById('tituloMapaIzquierdo');
+    const tituloDerEl = document.getElementById('tituloMapaDerecho');
+    if (tituloIzqEl) {
+        tituloIzqEl.textContent = tituloIzquierdo;
+    }
+    if (tituloDerEl) {
+        tituloDerEl.textContent = tituloDerecho;
     }
 }
 
