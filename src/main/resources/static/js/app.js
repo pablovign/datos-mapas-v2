@@ -187,6 +187,7 @@ function actualizarTituloMapaDerecho(titulo) {
 
 function actualizarAnalisisCorrelacion(circuitosData) {
     const series = extraerSeriesParaAnalisis(circuitosData);
+    const metadata = circuitosData?.metadata || {};
 
     if (series.votos.length < 2) {
         setCorrelacion('--', 'Sin datos suficientes para correlacionar');
@@ -194,13 +195,33 @@ function actualizarAnalisisCorrelacion(circuitosData) {
         return;
     }
 
-    const correlacion = calcularCorrelacionPearson(series.votos, series.nbi);
-    const regresion = calcularRegresionLineal(series.votos, series.nbi);
+    const correlacionBackend = Number(metadata.correlacion);
+    const pendienteBackend = Number(metadata.regresionPendiente);
+    const interceptoBackend = Number(metadata.regresionIntercepto);
+
+    const tieneCorrelacionBackend = Number.isFinite(correlacionBackend);
+    const tieneRegresionBackend = Number.isFinite(pendienteBackend) && Number.isFinite(interceptoBackend);
+
+    const correlacion = tieneCorrelacionBackend
+        ? correlacionBackend
+        : calcularCorrelacionPearson(series.votos, series.nbi);
+
+    const interpretacionBackend = typeof metadata.interpretacion === 'string' && metadata.interpretacion.trim() !== ''
+        ? metadata.interpretacion
+        : null;
+
+    const interpretacion = interpretacionBackend || (correlacion !== null && !Number.isNaN(correlacion)
+        ? interpretarPearson(correlacion)
+        : 'Sin variacion suficiente para calcular correlacion');
+
+    const regresion = tieneRegresionBackend
+        ? { pendiente: pendienteBackend, intercepto: interceptoBackend }
+        : calcularRegresionLineal(series.votos, series.nbi);
 
     if (correlacion === null || Number.isNaN(correlacion)) {
-        setCorrelacion('--', 'Sin variacion suficiente para calcular correlacion');
+        setCorrelacion('--', interpretacion);
     } else {
-        setCorrelacion(correlacion.toFixed(2), interpretarPearson(correlacion));
+        setCorrelacion(correlacion.toFixed(2), interpretacion);
     }
 
     renderizarGraficoDispersion(series.votos, series.nbi, regresion);
