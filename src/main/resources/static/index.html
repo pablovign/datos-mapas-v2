@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Datos Mapas - Análisis Electoral</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="css/styles.css?v=20260409b">
+    <link rel="stylesheet" href="css/styles.css?v=20260409c">
 </head>
 <body>
     <header>
@@ -70,14 +70,35 @@
         </div>
     </section>
 
+    <section class="tabla-circuitos-panel">
+        <h2>Detalle por circuito electoral</h2>
+        <div class="tabla-circuitos-wrapper">
+            <table class="tabla-circuitos" aria-label="Detalle por circuito electoral">
+                <thead>
+                    <tr>
+                        <th>Departamento</th>
+                        <th>Circuito</th>
+                        <th>% Opción de voto</th>
+                        <th>% NBI</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaCircuitosBody">
+                    <tr>
+                        <td colspan="4" class="tabla-vacia">Aplicá filtros para ver el detalle</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
     <footer>
         <p>Datos proporcionados por INDEC</p>
     </footer>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="js/api.js?v=20260409b"></script>
-    <script src="js/mapas.js?v=20260409b"></script>
-    <script src="js/app.js?v=20260409b"></script>
+    <script src="js/api.js?v=20260409c"></script>
+    <script src="js/mapas.js?v=20260409c"></script>
+    <script src="js/app.js?v=20260409c"></script>
 </body>
 </html>

@@ -2,6 +2,7 @@ package com.psv.datos_mapas.service;
 
 import com.psv.datos_mapas.model.CircuitoElectoral;
 import com.psv.datos_mapas.model.CircuitoElectoralOpcionVoto;
+import com.psv.datos_mapas.model.Departamento;
 import com.psv.datos_mapas.model.RadioCensal;
 import com.psv.datos_mapas.model.RadioCircuitoIntersec;
 import com.psv.datos_mapas.repository.CircuitoElectoralRepository;
@@ -92,8 +93,11 @@ public class CircuitoVotoService {
             }
 
             Map<String, Object> properties = new HashMap<>();
+            Departamento departamento = circuito.getDepartamento();
             properties.put("id", circId);
             properties.put("codigo", circuito.getCodigo());
+            properties.put("departamentoId", departamento != null ? departamento.getId() : null);
+            properties.put("departamentoNombre", departamento != null ? departamento.getNombre() : null);
             properties.put("electores", circuito.getElectores());
             properties.put("porcentajeVoto", porcentajeVoto);
             properties.put("porcentajeNbi", porcentajeNbi);

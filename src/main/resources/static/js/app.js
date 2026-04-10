@@ -149,6 +149,7 @@ async function aplicarFiltros() {
         renderizarCircuitosNbi(circuitosData);
         actualizarTituloMapaDerecho('Circuitos Electorales (% NBI)');
         actualizarAnalisisCorrelacion(circuitosData);
+        renderizarTablaCircuitos(circuitosData);
         
     } catch (error) {
         console.error('Error aplicando filtros:', error);
@@ -397,6 +398,73 @@ function interpretarPearson(r) {
 function limpiarResultadosAnaliticos() {
     setCorrelacion('--', 'Aplicá filtros para calcular');
     renderizarGraficoVacio();
+    limpiarTablaCircuitos();
+}
+
+function renderizarTablaCircuitos(circuitosData) {
+    const tablaBody = document.getElementById('tablaCircuitosBody');
+    if (!tablaBody) return;
+
+    const features = Array.isArray(circuitosData?.features) ? circuitosData.features : [];
+
+    if (features.length === 0) {
+        limpiarTablaCircuitos('Sin datos para los filtros seleccionados');
+        return;
+    }
+
+    const filas = features
+        .map(feature => feature?.properties || {})
+        .sort((a, b) => {
+            const deptoA = (a.departamentoNombre || '').toString();
+            const deptoB = (b.departamentoNombre || '').toString();
+            const compareDepto = deptoA.localeCompare(deptoB, 'es', { sensitivity: 'base' });
+            if (compareDepto !== 0) return compareDepto;
+
+            const codigoA = (a.codigo || '').toString();
+            const codigoB = (b.codigo || '').toString();
+            return codigoA.localeCompare(codigoB, 'es', { numeric: true, sensitivity: 'base' });
+        });
+
+    tablaBody.innerHTML = filas.map(props => {
+        const departamento = props.departamentoNombre || 'Sin departamento';
+        const circuito = props.codigo || props.id || '--';
+        const porcentajeVoto = formatearPorcentaje(props.porcentajeVoto);
+        const porcentajeNbi = formatearPorcentaje(props.porcentajeNbi);
+
+        return `
+            <tr>
+                <td>${escapeHtml(departamento)}</td>
+                <td>${escapeHtml(String(circuito))}</td>
+                <td class="valor-numerico">${porcentajeVoto}</td>
+                <td class="valor-numerico">${porcentajeNbi}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function limpiarTablaCircuitos(mensaje = 'Aplicá filtros para ver el detalle') {
+    const tablaBody = document.getElementById('tablaCircuitosBody');
+    if (!tablaBody) return;
+
+    tablaBody.innerHTML = `
+        <tr>
+            <td colspan="4" class="tabla-vacia">${escapeHtml(mensaje)}</td>
+        </tr>
+    `;
+}
+
+function formatearPorcentaje(valor) {
+    const numero = Number(valor);
+    return Number.isFinite(numero) ? `${numero.toFixed(2)}%` : '--';
+}
+
+function escapeHtml(valor) {
+    return String(valor)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
 }
 
 function setLoading(loading) {
