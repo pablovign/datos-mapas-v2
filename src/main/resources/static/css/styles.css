@@ -123,6 +123,28 @@ header .subtitle {
     margin-top: 0.25rem;
 }
 
+/* Checkboxes grupo */
+.checkboxes-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: #4a5568;
+}
+
+.checkbox-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
 /* Selects */
 select {
     min-width: 200px;
@@ -165,6 +187,14 @@ select:hover {
 
 .btn-secondary:hover {
     background: #cbd5e0;
+}
+
+.btn:disabled,
+.btn[disabled] {
+    background: #cbd5e0;
+    color: #a0aec0;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 /* Mapas */
@@ -245,6 +275,58 @@ select:hover {
     max-height: 250px;
 }
 
+.tabla-circuitos-panel {
+    background: white;
+    border-radius: 8px;
+    margin: 0 2rem 1.5rem;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.tabla-circuitos-panel h2 {
+    font-size: 1.125rem;
+    margin-bottom: 1rem;
+    color: #2d3748;
+}
+
+.tabla-circuitos-wrapper {
+    overflow-x: auto;
+}
+
+.tabla-circuitos {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 640px;
+}
+
+.tabla-circuitos th,
+.tabla-circuitos td {
+    padding: 0.625rem 0.75rem;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.875rem;
+}
+
+.tabla-circuitos th {
+    background: #f7fafc;
+    color: #2d3748;
+    text-align: left;
+    font-weight: 600;
+}
+
+.tabla-circuitos td {
+    color: #4a5568;
+}
+
+.tabla-circuitos td.valor-numerico {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.tabla-circuitos .tabla-vacia {
+    text-align: center;
+    color: #718096;
+}
+
 /* Footer */
 footer {
     background: #1e3a5f;
@@ -311,5 +393,9 @@ footer {
     
     .btn {
         flex: 1;
+    }
+
+    .tabla-circuitos-panel {
+        margin: 0 1rem 1.5rem;
     }
 }

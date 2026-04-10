@@ -2,16 +2,19 @@ package com.psv.datos_mapas.service;
 
 import com.psv.datos_mapas.model.CircuitoElectoral;
 import com.psv.datos_mapas.model.CircuitoElectoralOpcionVoto;
+import com.psv.datos_mapas.model.Departamento;
 import com.psv.datos_mapas.model.RadioCensal;
 import com.psv.datos_mapas.model.RadioCircuitoIntersec;
 import com.psv.datos_mapas.repository.CircuitoElectoralRepository;
 import com.psv.datos_mapas.repository.CircuitoElectoralOpcionVotoRepository;
 import com.psv.datos_mapas.repository.RadioCircuitoIntersecRepository;
 import com.psv.datos_mapas.util.GeoJsonHelper;
+import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import org.locationtech.jts.geom.Geometry;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class CircuitoVotoService {
@@ -31,31 +34,28 @@ public class CircuitoVotoService {
     public Map<String, Object> obtenerCircuitosConVotos(List<Integer> departamentoIds, 
                                                      String universo,
                                                      Integer opcionVotoId) {
-        // Obtener circuitos filtrados
         List<CircuitoElectoral> circuitos = (departamentoIds == null || departamentoIds.isEmpty())
             ? circuitoRepository.findAll()
             : circuitoRepository.findByDepartamentoIdIn(departamentoIds);
 
-        // Pre-cargar todos los datos de votos
-        Map<Integer, List<CircuitoElectoralOpcionVoto>> votosPorCircuito = new HashMap<>();
-        for (CircuitoElectoral c : circuitos) {
-            votosPorCircuito.put(c.getId(), votoRepository.findByCircuitoElectoralId(c.getId()));
+        if (circuitos.isEmpty()) {
+            return buildResponse(Collections.emptyList(), universo, opcionVotoId, departamentoIds, new AnalisisResultados());
         }
 
-        // Pre-cargar datos de intersección para NBI
-        Map<Integer, Double[]> nbiPorCircuito = calcularNbiPorCircuito(circuitos);
+        List<Integer> circuitoIds = circuitos.stream().map(CircuitoElectoral::getId).toList();
+        Map<Integer, List<CircuitoElectoralOpcionVoto>> votosPorCircuito = cargarVotosPorCircuito(circuitoIds);
+        Map<Integer, Double[]> nbiPorCircuito = calcularNbiPorCircuito(circuitoIds);
 
-        // Procesar cada circuito
         List<Map<String, Object>> features = new ArrayList<>();
+        List<Double> porcentajesVotos = new ArrayList<>();
+        List<Double> porcentajesNbi = new ArrayList<>();
 
         for (CircuitoElectoral circuito : circuitos) {
             Integer circId = circuito.getId();
             List<CircuitoElectoralOpcionVoto> votosCircuito = votosPorCircuito.getOrDefault(circId, Collections.emptyList());
 
-            // Calcular denominador según universo
             int denominador = calcularDenominador(votosCircuito, universo, circuito.getElectores());
 
-            // Calcular % de votos para la opción elegida
             Double porcentajeVoto = null;
             if (opcionVotoId != null && denominador > 0) {
                 Integer votosOpcion = votosCircuito.stream()
@@ -79,7 +79,6 @@ public class CircuitoVotoService {
                 porcentajeVoto = redondearDosDecimales(porcentajeVoto);
             }
 
-            // Obtener % NBI del circuito
             Double[] nbiData = nbiPorCircuito.get(circId);
             Double hogaresNbiPonderado = (nbiData != null) ? nbiData[0] : 0.0;
             Double hogaresPonderados = (nbiData != null) ? nbiData[1] : 0.0;
@@ -88,10 +87,17 @@ public class CircuitoVotoService {
                 : 0.0;
             porcentajeNbi = redondearDosDecimales(porcentajeNbi);
 
-            // Crear feature
+            if (porcentajeVoto != null) {
+                porcentajesVotos.add(porcentajeVoto);
+                porcentajesNbi.add(porcentajeNbi);
+            }
+
             Map<String, Object> properties = new HashMap<>();
+            Departamento departamento = circuito.getDepartamento();
             properties.put("id", circId);
             properties.put("codigo", circuito.getCodigo());
+            properties.put("departamentoId", departamento != null ? departamento.getId() : null);
+            properties.put("departamentoNombre", departamento != null ? departamento.getNombre() : null);
             properties.put("electores", circuito.getElectores());
             properties.put("porcentajeVoto", porcentajeVoto);
             properties.put("porcentajeNbi", porcentajeNbi);
@@ -105,18 +111,36 @@ public class CircuitoVotoService {
             }
         }
 
-        // Crear respuesta completa
+        AnalisisResultados analisis = calcularAnalisis(porcentajesVotos, porcentajesNbi);
+        return buildResponse(features, universo, opcionVotoId, departamentoIds, analisis);
+    }
+
+    private Map<Integer, List<CircuitoElectoralOpcionVoto>> cargarVotosPorCircuito(List<Integer> circuitoIds) {
+        return votoRepository.findByCircuitoElectoralIdIn(circuitoIds)
+            .stream()
+            .collect(Collectors.groupingBy(v -> v.getCircuitoElectoral().getId()));
+    }
+
+    private Map<String, Object> buildResponse(List<Map<String, Object>> features,
+                                              String universo,
+                                              Integer opcionVotoId,
+                                              List<Integer> departamentoIds,
+                                              AnalisisResultados analisis) {
         Map<String, Object> response = GeoJsonHelper.toFeatureCollection(features);
-        
-        // Agregar metadata
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("universo", universo != null ? universo : "AFIRMATIVOS");
         metadata.put("opcionVotoId", opcionVotoId);
         metadata.put("departamentoIds", departamentoIds);
         metadata.put("totalCircuitos", features.size());
+        metadata.put("correlacion", analisis.correlacion);
+        metadata.put("interpretacion", analisis.interpretacion);
+        metadata.put("votos", analisis.votos);
+        metadata.put("nbi", analisis.nbi);
+        metadata.put("regresionPendiente", analisis.regresionPendiente);
+        metadata.put("regresionIntercepto", analisis.regresionIntercepto);
+        metadata.put("totalPuntosAnalisis", analisis.votos.size());
 
         response.put("metadata", metadata);
-        
         return response;
     }
 
@@ -140,25 +164,106 @@ public class CircuitoVotoService {
         };
     }
 
-    private Map<Integer, Double[]> calcularNbiPorCircuito(List<CircuitoElectoral> circuitos) {
+    private Map<Integer, Double[]> calcularNbiPorCircuito(List<Integer> circuitoIds) {
         Map<Integer, Double[]> result = new HashMap<>();
-        
-        for (CircuitoElectoral c : circuitos) {
-            List<RadioCircuitoIntersec> intersecs = intersecRepository.findByCircuitoElectoralId(c.getId());
+        Map<Integer, List<RadioCircuitoIntersec>> interseccionesPorCircuito = intersecRepository
+            .findByCircuitoElectoralIdIn(circuitoIds)
+            .stream()
+            .collect(Collectors.groupingBy(i -> i.getCircuitoElectoral().getId()));
+
+        for (Integer circuitoId : circuitoIds) {
+            List<RadioCircuitoIntersec> intersecs = interseccionesPorCircuito.getOrDefault(circuitoId, Collections.emptyList());
             double nbiPonderado = 0;
             double hogaresPonderados = 0;
             
             for (RadioCircuitoIntersec intersec : intersecs) {
                 RadioCensal radio = intersec.getRadioCensal();
+                if (radio == null) {
+                    continue;
+                }
                 double coef = intersec.getCoeficienteArea().doubleValue();
-                nbiPonderado += radio.getHogaresNBI() * coef;
-                hogaresPonderados += radio.getHogaresTotal() * coef;
+                int hogaresNbi = radio.getHogaresNBI() != null ? radio.getHogaresNBI() : 0;
+                int hogaresTotal = radio.getHogaresTotal() != null ? radio.getHogaresTotal() : 0;
+                nbiPonderado += hogaresNbi * coef;
+                hogaresPonderados += hogaresTotal * coef;
             }
             
-            result.put(c.getId(), new Double[]{nbiPonderado, hogaresPonderados});
+            result.put(circuitoId, new Double[]{nbiPonderado, hogaresPonderados});
         }
         
         return result;
+    }
+
+    private AnalisisResultados calcularAnalisis(List<Double> votos, List<Double> nbi) {
+        AnalisisResultados resultado = new AnalisisResultados();
+        resultado.votos = votos;
+        resultado.nbi = nbi;
+        resultado.interpretacion = "Sin datos suficientes";
+
+        if (votos.size() < 2 || votos.size() != nbi.size()) {
+            return resultado;
+        }
+
+        double[] x = votos.stream().mapToDouble(Double::doubleValue).toArray();
+        double[] y = nbi.stream().mapToDouble(Double::doubleValue).toArray();
+
+        double correlacion = new PearsonsCorrelation().correlation(x, y);
+        if (!Double.isNaN(correlacion) && !Double.isInfinite(correlacion)) {
+            resultado.correlacion = redondearDosDecimales(correlacion);
+            resultado.interpretacion = interpretarPearson(resultado.correlacion);
+        } else {
+            resultado.interpretacion = "Sin variacion suficiente para calcular correlacion";
+        }
+
+        RegresionLineal regresion = calcularRegresionLineal(votos, nbi);
+        if (regresion != null) {
+            resultado.regresionPendiente = redondearDosDecimales(regresion.pendiente);
+            resultado.regresionIntercepto = redondearDosDecimales(regresion.intercepto);
+        }
+
+        return resultado;
+    }
+
+    private RegresionLineal calcularRegresionLineal(List<Double> x, List<Double> y) {
+        int n = x.size();
+        if (n < 2 || n != y.size()) {
+            return null;
+        }
+
+        double meanX = x.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+        double meanY = y.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+
+        double numerador = 0;
+        double denominador = 0;
+
+        for (int i = 0; i < n; i++) {
+            double dx = x.get(i) - meanX;
+            numerador += dx * (y.get(i) - meanY);
+            denominador += dx * dx;
+        }
+
+        if (denominador == 0) {
+            return null;
+        }
+
+        RegresionLineal regresion = new RegresionLineal();
+        regresion.pendiente = numerador / denominador;
+        regresion.intercepto = meanY - (regresion.pendiente * meanX);
+        return regresion;
+    }
+
+    private String interpretarPearson(double r) {
+        double absR = Math.abs(r);
+        if (absR >= 0.7) {
+            return "Correlación fuerte " + (r > 0 ? "positiva" : "negativa");
+        }
+        if (absR >= 0.4) {
+            return "Correlación moderada " + (r > 0 ? "positiva" : "negativa");
+        }
+        if (absR >= 0.2) {
+            return "Correlación débil";
+        }
+        return "Correlación nula";
     }
 
     private List<Map<String, Object>> construirDetalleVotos(List<CircuitoElectoralOpcionVoto> votosCircuito, Integer electores) {
@@ -196,5 +301,19 @@ public class CircuitoVotoService {
 
     private double redondearDosDecimales(double valor) {
         return Math.round(valor * 100.0) / 100.0;
+    }
+
+    private static class AnalisisResultados {
+        private Double correlacion;
+        private String interpretacion;
+        private List<Double> votos = new ArrayList<>();
+        private List<Double> nbi = new ArrayList<>();
+        private Double regresionPendiente;
+        private Double regresionIntercepto;
+    }
+
+    private static class RegresionLineal {
+        private double pendiente;
+        private double intercepto;
     }
 }
