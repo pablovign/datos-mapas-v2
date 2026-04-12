@@ -1,16 +1,14 @@
-# Fase 1: Compilación (Build)
-# Usamos una imagen de Maven con JDK 17 sobre una base estable
-FROM maven:3.8.5-eclipse-temurin-17 AS build
+# Fase 1: Compilación usando Java 21
+FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /app
 COPY pom.xml .
 COPY src ./src
 RUN mvn clean package -DskipTests
 
-# Fase 2: Ejecución (Runtime)
-# Usamos directamente Eclipse Temurin, que es el estándar actual
-FROM eclipse-temurin:17-jdk-alpine
+# Fase 2: Ejecución usando Java 21
+FROM eclipse-temurin:21-jdk-alpine
 WORKDIR /app
-# Copiamos el jar desde la fase de build
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Agregamos una variable para que Spring escuche en el puerto de Render
+ENTRYPOINT ["java", "-Dserver.port=${PORT}", "-jar", "app.jar"]
