@@ -1,10 +1,16 @@
-# 1. Usamos una imagen de Maven para compilar el código
-FROM maven:3.8.5-openjdk-17 AS build
-COPY . .
+# Fase 1: Compilación (Build)
+# Usamos una imagen de Maven con JDK 17 sobre una base estable
+FROM maven:3.8.5-eclipse-temurin-17 AS build
+WORKDIR /app
+COPY pom.xml .
+COPY src ./src
 RUN mvn clean package -DskipTests
 
-# 2. Usamos una imagen de Java ligera para correr el archivo .jar
-FROM openjdk:17-jdk-slim
-COPY --from=build /target/*.jar app.jar
+# Fase 2: Ejecución (Runtime)
+# Usamos directamente Eclipse Temurin, que es el estándar actual
+FROM eclipse-temurin:17-jdk-alpine
+WORKDIR /app
+# Copiamos el jar desde la fase de build
+COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
-ENTRYPOINT ["java","-jar","/app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
